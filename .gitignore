@@ -1,0 +1,82 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env.bak/
+venv.bak/
+rootenv/
+backend/.env
+
+
+# === Logs ===
+*.log
+server.log
+debug_output.txt
+debug_output.json
+dart_analysis.txt
+
+# === Databases ===
+*.sqlite
+*.db
+app_db.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+
+# === Flutter & Dart ===
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/.pub-cache/
+frontend/.pub/
+frontend/build/
+frontend/app_db.sqlite
+frontend/app.so
+frontend/lib/generated_plugin_registrant.dart
+frontend/*.txt
+
+
+# === IDEs ===
+.vscode/
+.idea/
+*.swp
+*.swo
+.history/
+
+# === OS Files ===
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# === Temporary ===
+tmp/
+dist-installer/
+installer-build/
+scratch/
+*.spec
+*.iss
