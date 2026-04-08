@@ -77,4 +77,5 @@ Desktop.ini
 tmp/
 dist-installer/
 installer-build/
+installer_output/
 scratch/

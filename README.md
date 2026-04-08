@@ -4,6 +4,12 @@ A full-stack, AI-powered university timetable generator. UniScheduler uses a **m
 
 ---
 
+## 📥 Downloads
+
+**[Download the Latest Windows Installer](https://github.com/naresh6184/University-Time-Table-Scheduling-System/releases)**
+
+---
+
 ## ✨ Features
 
 - **Automated Timetable Generation** — NSGA-II (Non-dominated Sorting Genetic Algorithm II) optimizes schedules across multiple competing objectives simultaneously.
@@ -166,7 +172,7 @@ venv\Scripts\activate
 **b. Install dependencies**
 
 ```bash
-pip install fastapi uvicorn sqlalchemy python-dotenv sqladmin openpyxl
+pip install -r requirements.txt
 ```
 
 **c. Configure environment variables**
@@ -272,11 +278,14 @@ This prevents direct browser access to the API and ensures only the desktop clie
 
 ---
 
-## 📄 License
+## 👤 Author
 
-This project is licensed under the **MIT License**.
+**Naresh Kumar**  
+📧 [nareshjangir6184@gmail.com](mailto:nareshjangir6184@gmail.com)
 
 ---
+
+## 📄 License
 
 ## 🙏 Acknowledgements
 
