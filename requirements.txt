@@ -1,0 +1,52 @@
+# ── UniScheduler Backend - Python Dependencies ──
+# Install with: pip install -r requirements.txt
+
+# Web Framework
+fastapi==0.135.1
+uvicorn==0.41.0
+starlette==0.52.1
+python-multipart==0.0.22
+
+# Database
+SQLAlchemy==2.0.48
+greenlet==3.3.2
+
+# MySQL Driver (optional — SQLite used by default)
+PyMySQL==1.1.2
+
+# Admin Panel
+sqladmin==0.23.0
+WTForms==3.1.2
+
+# Templating (sqladmin dependency)
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+
+# Data Validation
+pydantic==2.12.5
+pydantic_core==2.41.5
+annotated-types==0.7.0
+typing_extensions==4.15.0
+typing-inspection==0.4.2
+
+# Excel Import/Export
+openpyxl==3.1.5
+et_xmlfile==2.0.0
+
+# PDF Export
+PyMuPDF==1.27.2.2
+
+# Environment Variables
+python-dotenv==1.2.2
+
+# Async / Networking
+anyio==4.12.1
+h11==0.16.0
+idna==3.11
+click==8.3.1
+colorama==0.4.6
+sniffio==1.3.1
+
+# Packaging (used by uvicorn/starlette internally)
+packaging==26.0
+annotated-doc==0.0.4
