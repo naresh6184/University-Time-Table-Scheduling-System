@@ -213,11 +213,23 @@ class _LiveProgressPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                Row(
                   children: [
-                    Text('Violations', style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
-                    Text('${data.bestViolation ?? "-"}', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: data.bestViolation == 0 ? Colors.green : Colors.red)),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('Score', style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+                        Text('${data.bestSoftScore?.toStringAsFixed(2) ?? "-"}', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                      ],
+                    ),
+                    const SizedBox(width: 24),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('Violations', style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+                        Text('${data.bestViolation ?? "-"}', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: data.bestViolation == 0 ? Colors.green : Colors.red)),
+                      ],
+                    ),
                   ],
                 )
               ],
@@ -276,7 +288,7 @@ class _LiveProgressPanel extends StatelessWidget {
                     children: [
                       Text(data?.status ?? 'Completed', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold)),
                       if (data?.bestViolation != null)
-                         Text('Final Violations: ${data?.bestViolation}', style: GoogleFonts.inter(color: theme.colorScheme.onSurfaceVariant)),
+                         Text('Final Violations: ${data?.bestViolation} • Score: ${data?.bestSoftScore?.toStringAsFixed(2)}', style: GoogleFonts.inter(color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 ),
@@ -574,7 +586,7 @@ class _VersionCard extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  'Conflicts: $conflictCount',
+                  'Conflicts: $conflictCount • Quality Score: ${version.bestSoftScore.toStringAsFixed(2)}',
                   style: GoogleFonts.inter(fontSize: 14, color: theme.colorScheme.onSurfaceVariant),
                 ),
               ],

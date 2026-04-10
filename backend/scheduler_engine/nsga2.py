@@ -284,7 +284,7 @@ def run_nsga2(population_size, generations, enrollments, teachers, classrooms, s
             found_feasible = True
             
         if progress_callback:
-            progress_callback(gen, best.violation, best.chromosome)
+            progress_callback(gen, best.violation, best.chromosome, best.objectives)
         
         if (gen + 1) % 10 == 0:
             logger.info(f"  Gen {gen+1:4} | V={best.violation:5} | "

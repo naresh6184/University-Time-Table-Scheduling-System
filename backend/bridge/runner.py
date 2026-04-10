@@ -97,6 +97,7 @@ def run_scheduler(db: Session, session_id: int, population_size: int = 100, gene
         "generation": 0,
         "max_generations": generations,
         "best_violation": None,
+        "best_soft_score": None,
         "breakdown": None,
         "is_feasible": False,
         "conflict_logs": [],
@@ -172,8 +173,9 @@ def run_scheduler(db: Session, session_id: int, population_size: int = 100, gene
             
             logger.info(f"  --- Attempt {attempt}/{max_attempts} (pop={population_size}, gens={generations}) ---")
             
-            def progress_cb(gen, best_violation, best_chromosome):
+            def progress_cb(gen, best_violation, best_chromosome, best_objectives):
                 generation_progress[session_id]["generation"] = gen + 1
+                generation_progress[session_id]["best_soft_score"] = sum(best_objectives) if best_objectives else 0.0
                 
                 raw_count = 0
                 temp_logs = []
@@ -344,6 +346,7 @@ def run_scheduler(db: Session, session_id: int, population_size: int = 100, gene
         # and Version Card always display the same number.
         final_conflict_count = sum(item.get("count", 0) for item in conflict_logs)
         generation_progress[session_id]["best_violation"] = final_conflict_count
+        generation_progress[session_id]["best_soft_score"] = sum(best_solution.objectives) if best_solution.objectives else 0.0
 
         # -------------------------
         # DEBUG PRINT

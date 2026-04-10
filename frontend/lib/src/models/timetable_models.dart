@@ -84,6 +84,7 @@ class GenerationStatusData {
   final int generation;
   final int maxGenerations;
   final int? bestViolation;
+  final double? bestSoftScore;
   final bool isFeasible;
   final List<ConflictLog> conflictLogs;
   final Map<String, dynamic>? feasibilityInfo;
@@ -95,6 +96,7 @@ class GenerationStatusData {
     required this.generation,
     required this.maxGenerations,
     this.bestViolation,
+    this.bestSoftScore,
     required this.isFeasible,
     required this.conflictLogs,
     this.feasibilityInfo,
@@ -108,6 +110,7 @@ class GenerationStatusData {
       generation: json['generation'] as int? ?? 0,
       maxGenerations: json['max_generations'] as int? ?? 0,
       bestViolation: json['best_violation'] as int?,
+      bestSoftScore: (json['best_soft_score'] as num?)?.toDouble(),
       isFeasible: json['is_feasible'] as bool? ?? false,
       conflictLogs: (json['conflict_logs'] as List<dynamic>?)
               ?.map((e) => ConflictLog.fromJson(e as Map<String, dynamic>))
