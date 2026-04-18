@@ -33,7 +33,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: '3.19.0' # Adjust based on your local version
+          cache: true
 
       - name: Install Flutter Dependencies
         run: |
