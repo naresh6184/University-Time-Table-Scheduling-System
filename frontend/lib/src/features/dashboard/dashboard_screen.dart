@@ -262,7 +262,7 @@ class _QuickActions extends ConsumerWidget {
           spacing: 12,
           runSpacing: 12,
           children: [
-            _ActionButton(label: 'Add Student', icon: Icons.person_add_rounded, onPressed: () => context.go('/org-center?tab=2')),
+
             _ActionButton(label: 'Create Enrollment', icon: Icons.link_rounded, onPressed: () => context.go('/enrollment')),
             if (activeSession != null && activeSession.sessionId != -1) ...[
               _ActionButton(

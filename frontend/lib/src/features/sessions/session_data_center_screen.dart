@@ -154,7 +154,9 @@ class _SessionDataCenterScreenState extends ConsumerState<SessionDataCenterScree
                   '${item.name} (${item.code})', 
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600)
                 ),
-                subtitle: Text('Teacher', style: GoogleFonts.inter(fontSize: 12, color: colorScheme.onSurfaceVariant.withAlpha(150))),
+                subtitle: (item.email != null && item.email!.isNotEmpty)
+                    ? Text(item.email!, style: GoogleFonts.inter(fontSize: 12, color: colorScheme.onSurfaceVariant.withAlpha(150)))
+                    : null,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -312,7 +314,10 @@ class _SessionDataCenterScreenState extends ConsumerState<SessionDataCenterScree
                 ),
 
                 title: Text(item.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-                subtitle: Text(item.description ?? 'No description', style: GoogleFonts.outfit()),
+                subtitle: Text(
+                  '${item.studentCount} Students${(item.description != null && item.description!.isNotEmpty) ? ' • ${item.description}' : ''}', 
+                  style: GoogleFonts.outfit()
+                ),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   tooltip: 'Remove from session',
