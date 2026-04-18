@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from backend.database.models.teacher import TeacherModel
@@ -11,6 +12,7 @@ from backend.database.models.teacher_availability import (
     SessionTeacherAvailabilityModel
 )
 
+from backend.database.models.group_student import GroupStudentModel
 from backend.database.models.session_entities import (
     SessionTeacherModel,
     SessionSubjectModel,
@@ -75,7 +77,24 @@ def remove_subject_from_session(db: Session, session_id: int, subject_id: int):
 
 # --- Groups ---
 def get_session_groups(db: Session, session_id: int):
-    return db.query(GroupModel).join(SessionGroupModel, GroupModel.group_id == SessionGroupModel.group_id).filter(SessionGroupModel.session_id == session_id).all()
+    # 1. Get IDs of groups linked to this session
+    session_group_ids = db.query(SessionGroupModel.group_id).filter(SessionGroupModel.session_id == session_id).all()
+    group_ids = [g[0] for g in session_group_ids]
+
+    if not group_ids:
+        return []
+
+    # 2. Fetch those groups with their individual student counts
+    results = db.query(GroupModel, func.count(GroupStudentModel.student_id).label("student_count"))\
+        .outerjoin(GroupStudentModel, GroupModel.group_id == GroupStudentModel.group_id)\
+        .filter(GroupModel.group_id.in_(group_ids))\
+        .group_by(GroupModel.group_id).all()
+
+    groups = []
+    for group, count in results:
+        group.student_count = count
+        groups.append(group)
+    return groups
 
 def add_group_to_session(db: Session, session_id: int, group_id: int):
     existing = db.query(SessionGroupModel).filter_by(session_id=session_id, group_id=group_id).first()
