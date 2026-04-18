@@ -57,11 +57,13 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
               const Spacer(),
               const _VersionHeaderCard(),
               const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.download_rounded),
-                tooltip: 'Export Timetables',
-                onPressed: () => _showExportOptionsDialog(context, ref, _selectedType, selectedEntity),
-              ),
+              // Only show export when timetables exist
+              if (ref.watch(versionsProvider).value?.isNotEmpty == true)
+                IconButton(
+                  icon: const Icon(Icons.download_rounded),
+                  tooltip: 'Export Timetables',
+                  onPressed: () => _showExportOptionsDialog(context, ref, _selectedType, selectedEntity),
+                ),
             ],
           ),
         ),
@@ -830,6 +832,8 @@ class _DayRow extends ConsumerWidget {
                 cellRoom: cell.room,
                 cellTeacher: cell.teacher,
                 cellGroup: cell.group,
+                cellEntryId: cell.entryId,
+                cellEnrollmentId: cell.enrollmentId,
               )).toList();
             }
 

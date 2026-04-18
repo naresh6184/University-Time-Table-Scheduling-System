@@ -128,13 +128,32 @@ class SlotConflict {
     );
   }
 
-  /// Check if this conflict is relevant to a given cell
-  bool isRelevantTo({String? cellRoom, String? cellTeacher, String? cellGroup}) {
-    // A conflict is relevant if any of its entity fields match the cell's entity fields
+  /// Check if this conflict is relevant to a given cell.
+  /// Uses entry_ids as the most precise filter when available.
+  bool isRelevantTo({String? cellRoom, String? cellTeacher, String? cellGroup, int? cellEntryId, int? cellEnrollmentId}) {
+    // Primary precision filter: if we have entry_ids, the cell must match one
+    if (entryIds.isNotEmpty && cellEntryId != null) {
+      return entryIds.contains(cellEntryId);
+    }
+    // Secondary: check enrollment_ids
+    if (enrollmentIds.isNotEmpty && cellEnrollmentId != null) {
+      return enrollmentIds.contains(cellEnrollmentId);
+    }
+    // Fallback to type-aware entity field matching
+    if (type == 'Capacity' || type == 'Type Mismatch') {
+      return (room != null && cellRoom == room) && (group != null && cellGroup == group);
+    } else if (type == 'Teacher Overlap' || type == 'Availability') {
+      return teacher != null && cellTeacher == teacher;
+    } else if (type == 'Room Overlap') {
+      return room != null && cellRoom == room;
+    } else if (type == 'Group Double-Book' || type == 'Student Overlap') {
+      return group != null && cellGroup == group;
+    }
+
+    // Generic fallback
     if (room != null && cellRoom != null && room == cellRoom) return true;
     if (teacher != null && cellTeacher != null && teacher == cellTeacher) return true;
     if (group != null && cellGroup != null && group == cellGroup) return true;
-    // If no entity fields set (generic conflict), show it everywhere
     if (room == null && teacher == null && group == null) return true;
     return false;
   }
@@ -187,8 +206,7 @@ class VersionConflictsData {
   }
 
   /// Get all slot keys that should be highlighted when a conflict cell is clicked.
-  /// Uses enrollment IDs to find ALL slots (including continuation slots) that
-  /// belong to any of the involved classes, so the entire rectangle is highlighted.
+  /// Uses semantics to highlight all connected cells (e.g. all classes of G1 in AB101).
   Set<int> getRelatedConflictSlots(
     List<SlotConflict> conflictsAtSlotRaw,
     String sourceSlotKey,
@@ -196,94 +214,52 @@ class VersionConflictsData {
     {String? typeFilter}
   ) {
     final related = <int>{};
-    if (conflictsAtSlotRaw.isEmpty) return related;
+    if (conflictsAtSlotRaw.isEmpty || grid == null) return related;
 
-    // If a filter is active, only consider conflicts of that type in the source slot.
     final conflictsAtSlot = typeFilter == null
         ? conflictsAtSlotRaw
         : conflictsAtSlotRaw.where((c) => c.type == typeFilter).toList();
 
-    // Collect all involved IDs
-    final Set<int> involvedEnrollmentIds = {};
-    final Set<int> involvedEntryIds = {};
-    for (final conflict in conflictsAtSlot) {
-      involvedEnrollmentIds.addAll(conflict.enrollmentIds);
-      involvedEntryIds.addAll(conflict.entryIds);
-    }
+    for (final dayEntry in grid.grid.entries) {
+      for (final cell in dayEntry.value) {
+        if (cell.isEmpty) continue;
 
-    // Scan grid using entry IDs (precise) or enrollment IDs (fallback)
-    if ((involvedEntryIds.isNotEmpty || involvedEnrollmentIds.isNotEmpty) && grid != null) {
-      for (final dayEntry in grid.grid.entries) {
-        final day = dayEntry.key;
-        final cells = dayEntry.value;
-        for (int i = 0; i < cells.length; i++) {
-          final cell = cells[i];
-          if (cell.isEmpty) continue;
-
-          final period = grid.periods[i].period;
-          final key = '${day}_$period';
-          if (key == sourceSlotKey) continue;
-
-          // Check the primary cell
+        // Helper to check a single grid cell (primary or stacked)
+        void checkCell(GridCell c) {
+          if (c.entryId == null) return;
           bool matches = false;
-          if (involvedEntryIds.isNotEmpty) {
-            // STRICT MODE: If we have entry IDs, only match by entry ID
-            if (cell.entryId != null && involvedEntryIds.contains(cell.entryId)) {
-              matches = true;
+          for (final conflict in conflictsAtSlot) {
+            if (conflict.type == 'Capacity') {
+              // Persistent constraints: highlight all occurrences across the week that share this exact combo
+              if (conflict.room != null && conflict.group != null && c.room == conflict.room && c.group == conflict.group) {
+                matches = true; break;
+              }
+            } else if (conflict.type == 'Type Mismatch') {
+               // Type mismatch applies to the entire enrollment requirement (all classes for this subject)
+               if (c.enrollmentId != null && conflict.enrollmentIds.contains(c.enrollmentId)) {
+                 matches = true; break;
+               }
+            } else {
+              // Slot-specific constraints (Availability, Overlaps, etc.): ONLY highlight the exact involved entries
+              if (conflict.entryIds.contains(c.entryId)) {
+                matches = true; break;
+              }
             }
-          } else if (cell.enrollmentId != null && involvedEnrollmentIds.contains(cell.enrollmentId)) {
-            // FALLBACK: Only use enrollment ID if no entry IDs were available
-            matches = true;
           }
-
           if (matches) {
-            if (cell.entryId != null) related.add(cell.entryId!);
+            related.add(c.entryId!);
           }
+        }
 
-          // Check stacked entries using the same strict/fallback logic
-          for (final stacked in cell.stackedEntries) {
-            if (involvedEntryIds.isNotEmpty) {
-              if (stacked.entryId != null && involvedEntryIds.contains(stacked.entryId)) {
-                related.add(stacked.entryId!);
-              }
-            } else if (stacked.enrollmentId != null && involvedEnrollmentIds.contains(stacked.enrollmentId)) {
-              if (stacked.entryId != null) related.add(stacked.entryId!);
-            }
-          }
+        checkCell(cell);
+        for (final stacked in cell.stackedEntries) {
+          checkCell(stacked);
         }
       }
     }
-
-    // Fallback: also match by normalized detail for conflicts without any IDs
-    if (involvedEnrollmentIds.isEmpty && involvedEntryIds.isEmpty && grid != null) {
-      for (final conflict in conflictsAtSlot) {
-        final normalizedSourceDetail = _normalizeConflictDetail(conflict.detail);
-        for (final dayEntry in grid.grid.entries) {
-          for (final cell in dayEntry.value) {
-            if (cell.isEmpty) continue;
-            final cellDetail = conflict.type == "Availability" 
-                ? "${cell.teacher} availability" 
-                : cell.subject ?? "";
-            
-            if (_normalizeConflictDetail(cellDetail) == normalizedSourceDetail) {
-              if (cell.entryId != null) related.add(cell.entryId!);
-            }
-            
-            for (final stacked in cell.stackedEntries) {
-              final stackedDetail = conflict.type == "Availability" 
-                  ? "${stacked.teacher} availability" 
-                  : stacked.subject ?? "";
-              if (_normalizeConflictDetail(stackedDetail) == normalizedSourceDetail) {
-                if (stacked.entryId != null) related.add(stacked.entryId!);
-              }
-            }
-          }
-        }
-      }
-    }
-
     return related;
   }
+
 
   // Helper to remove period-specific notes so we can match the same "incident" across multiple slots
   String _normalizeConflictDetail(String detail) {

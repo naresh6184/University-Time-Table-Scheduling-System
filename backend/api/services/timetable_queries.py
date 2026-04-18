@@ -687,6 +687,209 @@ def get_branch_grid_rows(db: Session, branch_id: int, version_id: int = None):
 
 
 # ------------------------------------------------
+# Map DB conflict type names -> frontend type names
+# ------------------------------------------------
+_DB_TYPE_TO_FRONTEND = {
+    "Teacher Availability": "Availability",
+    "Room Capacity": "Capacity",
+    "Room Type Mismatch": "Type Mismatch",
+    "Lunch Break Conflict": "Lunch Break Conflict",
+    "Same-Day Duplicate": "Same-Day Duplicate",
+    "Day Boundary Conflict": "Crosses Day Boundary",
+    "Teacher Overlap": "Teacher Overlap",
+    "Room Overlap": "Room Overlap",
+    "Group Double-Book": "Group Double-Book",
+    "Student Overlap": "Student Overlap",
+    "Missing Enrollments": "Missing Enrollments",
+    "Invalid Timeslot": "Invalid Timeslot",
+}
+
+def _parse_slot_label(slot_label):
+    """Parse 'Monday - Period 2' into ('Monday', 2). Returns (None, None) on failure."""
+    if not slot_label or " - Period " not in slot_label:
+        return None, None
+    try:
+        parts = slot_label.split(" - Period ")
+        return parts[0], int(parts[1])
+    except Exception:
+        return None, None
+
+
+def _build_conflicts_from_snapshot(db: Session, version):
+    """
+    Build by_slot conflict data from immutable TimetableConflictModel records.
+    This ensures historical timetables retain their original conflict state
+    regardless of subsequent changes to teacher availability or other settings.
+    """
+    from backend.database.models.timetable_conflict import TimetableConflictModel
+    from backend.database.models.timetable_conflict_type import TimetableConflictTypeModel
+
+    version_id = version.version_id
+
+    # Fetch all historical conflict records with their type names
+    records = (
+        db.query(
+            TimetableConflictModel.conflict_type_id,
+            TimetableConflictModel.entity_id,
+            TimetableConflictModel.entity_name,
+            TimetableConflictModel.slot_label,
+            TimetableConflictModel.primary_enrollment_id,
+            TimetableConflictModel.conflicting_enrollment_id,
+            TimetableConflictTypeModel.name.label("db_type_name"),
+        )
+        .join(TimetableConflictTypeModel, TimetableConflictTypeModel.type_id == TimetableConflictModel.conflict_type_id)
+        .filter(TimetableConflictModel.version_id == version_id)
+        .all()
+    )
+
+    if not records:
+        return None  # Signal caller to fall back to dynamic
+
+    # Pre-load all entries for this version (these are immutable)
+    all_entries = (
+        db.query(
+            TimetableEntryModel.entry_id,
+            TimetableEntryModel.enrollment_id,
+            TimetableEntryModel.slot_id,
+            TimetableEntryModel.duration,
+            TimetableEntryModel.room_id,
+            EnrollmentModel.teacher_id,
+            EnrollmentModel.group_id,
+            TeacherModel.name.label("teacher_name"),
+            SubjectModel.name.label("subject_name"),
+            GroupModel.name.label("group_name"),
+            ClassroomModel.name.label("room_name"),
+        )
+        .join(EnrollmentModel, EnrollmentModel.enrollment_id == TimetableEntryModel.enrollment_id)
+        .join(TeacherModel, TeacherModel.teacher_id == EnrollmentModel.teacher_id)
+        .join(SubjectModel, SubjectModel.subject_id == EnrollmentModel.subject_id)
+        .join(GroupModel, GroupModel.group_id == EnrollmentModel.group_id)
+        .outerjoin(ClassroomModel, ClassroomModel.room_id == TimetableEntryModel.room_id)
+        .filter(TimetableEntryModel.version_id == version_id)
+        .all()
+    )
+
+    # Lookups: entry_id -> entry data (for precise detail messages)
+    # enrollment_id -> entry data (as fallback)
+    entry_lookup = {e.entry_id: e for e in all_entries}
+    enroll_lookup = {e.enrollment_id: e for e in all_entries}
+
+    # Slot lookups (must be built before slot_id_map)
+    slots = db.query(SessionSlotModel).filter(
+        SessionSlotModel.session_id == version.session_id
+    ).all()
+    slot_time_by_period = {(s.day, s.period_number): (s.start_time, s.end_time) for s in slots}
+
+    # Slot-aware entry lookup: find the correct entry_id for a specific
+    # enrollment at a specific (day, period). An enrollment can appear on
+    # multiple days, so a flat enrollment_id->entry_id map would be wrong.
+    slot_id_map = {s.slot_id: (s.day, s.period_number) for s in slots}
+    # enrollment_id -> list of (entry_id, day, start_period, duration)
+    enrollment_entries = {}
+    for e in all_entries:
+        e_day, e_period = slot_id_map.get(e.slot_id, (None, None))
+        if e_day:
+            enrollment_entries.setdefault(e.enrollment_id, []).append(
+                (e.entry_id, e_day, e_period, e.duration)
+            )
+
+    def _find_entry_id(enrollment_id, target_day, target_period):
+        """Find the entry_id for an enrollment at a specific day+period (handles multi-hour spans)."""
+        for eid, eday, eperiod, edur in enrollment_entries.get(enrollment_id, []):
+            if eday == target_day and eperiod <= target_period < eperiod + edur:
+                return eid
+        return None
+
+    by_slot = {}
+    type_counts = {}
+
+    for rec in records:
+        frontend_type = _DB_TYPE_TO_FRONTEND.get(rec.db_type_name, rec.db_type_name)
+        day, period = _parse_slot_label(rec.slot_label)
+        if day is None:
+            continue
+
+        key = f"{day}_{period}"
+        
+        # Build enrollment_ids and entry_ids using SLOT-AWARE lookup
+        enrollment_ids = [rec.primary_enrollment_id] if rec.primary_enrollment_id else []
+        entry_ids = []
+        primary_eid = None
+        if rec.primary_enrollment_id:
+            primary_eid = _find_entry_id(rec.primary_enrollment_id, day, period)
+            if primary_eid:
+                entry_ids.append(primary_eid)
+                
+        conflicting_eid = None
+        if rec.conflicting_enrollment_id:
+            enrollment_ids.append(rec.conflicting_enrollment_id)
+            conflicting_eid = _find_entry_id(rec.conflicting_enrollment_id, day, period)
+            if conflicting_eid:
+                entry_ids.append(conflicting_eid)
+
+        # Get EXACT primary and conflicting entries for the detail messages
+        primary = entry_lookup.get(primary_eid) if primary_eid else enroll_lookup.get(rec.primary_enrollment_id)
+        conflicting = entry_lookup.get(conflicting_eid) if conflicting_eid else enroll_lookup.get(rec.conflicting_enrollment_id)
+
+        # Build detail message
+        times = slot_time_by_period.get((day, period), ("?", "?"))
+        if frontend_type == "Availability" and primary:
+            detail = f"{primary.teacher_name} is not available at this slot from {times[0]} to {times[1]} (teaching {primary.subject_name} for {primary.group_name})"
+        elif frontend_type == "Teacher Overlap" and primary and conflicting:
+            detail = f"{primary.teacher_name} is double-booked: {primary.subject_name} ({primary.group_name}) ↔ {conflicting.subject_name} ({conflicting.group_name})"
+        elif frontend_type == "Room Overlap" and primary and conflicting:
+            detail = f"{primary.room_name} has 2 classes: {primary.subject_name} ({primary.group_name}) ↔ {conflicting.subject_name} ({conflicting.group_name})"
+        elif frontend_type == "Group Double-Book" and primary and conflicting:
+            detail = f"{primary.group_name} has 2 classes: {primary.subject_name} ↔ {conflicting.subject_name}"
+        elif frontend_type == "Student Overlap" and primary and conflicting:
+            detail = f"Students in {primary.group_name} and {conflicting.group_name} are double-booked: {primary.subject_name} ↔ {conflicting.subject_name}"
+        elif frontend_type == "Capacity" and primary:
+            detail = f"Room {primary.room_name} too small for {primary.group_name}"
+        elif frontend_type == "Type Mismatch" and primary:
+            detail = f"{primary.subject_name} scheduled in {primary.room_name}"
+        elif frontend_type == "Same-Day Duplicate" and primary:
+            detail = f"{primary.subject_name} is already scheduled on {day} for {primary.group_name}"
+        elif frontend_type == "Lunch Break Conflict" and primary:
+            detail = f"{primary.subject_name} crosses lunch break"
+        else:
+            detail = rec.entity_name or f"Conflict at {rec.slot_label}"
+
+
+        conflict_entry = {"type": frontend_type, "detail": detail}
+        if enrollment_ids:
+            conflict_entry["enrollment_ids"] = enrollment_ids
+        if entry_ids:
+            conflict_entry["entry_ids"] = entry_ids
+
+        # Attach entity fields for the frontend to use in related highlighting
+        if primary:
+            conflict_entry["teacher"] = primary.teacher_name
+            conflict_entry["group"] = primary.group_name
+            conflict_entry["room"] = primary.room_name
+
+        by_slot.setdefault(key, []).append(conflict_entry)
+        type_counts[frontend_type] = type_counts.get(frontend_type, 0) + 1
+
+    # Use stored GA summary for banner counts (matches generation feed)
+    import json
+    stored_summary = []
+    if version.conflict_json:
+        try:
+            stored_summary = json.loads(version.conflict_json)
+        except Exception:
+            pass
+
+    if stored_summary:
+        summary = [{"type": item["type"], "count": item["count"]} for item in stored_summary]
+        total = sum(item["count"] for item in stored_summary)
+    else:
+        summary = [{"type": k, "count": v} for k, v in type_counts.items()]
+        total = sum(type_counts.values())
+
+    return {"total": total, "summary": summary, "by_slot": by_slot}
+
+
+# ------------------------------------------------
 # Detailed Conflict Detection (slot-keyed for grid highlighting)
 # ------------------------------------------------
 def get_detailed_conflicts(db: Session, version_id: int):
@@ -701,6 +904,15 @@ def get_detailed_conflicts(db: Session, version_id: int):
     if not version:
         return {"total": 0, "summary": [], "by_slot": {}}
 
+    # ── STRICT SNAPSHOT MODE ──
+    # Try to build conflicts from immutable TimetableConflictModel records
+    # saved at generation time. This prevents stale data when users update
+    # teacher availability or other settings after generation.
+    snapshot_result = _build_conflicts_from_snapshot(db, version)
+    if snapshot_result is not None:
+        return snapshot_result
+
+    # ── FALLBACK: Dynamic calculation for legacy versions ──
     from backend.database.models.session_slot import SessionSlotModel
     from backend.database.models.group_student import GroupStudentModel
 
