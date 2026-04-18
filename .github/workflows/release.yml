@@ -1,0 +1,65 @@
+name: Build and Release UniScheduler
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*' # Trigger on version tags like v1.0.0
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build Python Backend
+        run: |
+          pyinstaller UniScheduler_Server.spec
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.19.0' # Adjust based on your local version
+
+      - name: Install Flutter Dependencies
+        run: |
+          cd frontend
+          flutter pub get
+
+      - name: Build Flutter Windows App
+        run: |
+          cd frontend
+          flutter build windows --release
+
+      - name: Compile Inno Setup Installer
+        run: |
+          iscc unischeduler_installer.iss
+
+      - name: Upload Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UniScheduler-Setup
+          path: installer_output/*.exe
+
+      - name: Create Release and Upload
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: installer_output/*.exe
+          body: "Automatic release for version ${{ github.ref_name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

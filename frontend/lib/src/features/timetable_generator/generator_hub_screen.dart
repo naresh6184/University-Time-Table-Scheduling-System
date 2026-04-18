@@ -185,7 +185,20 @@ class _LiveProgressPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Generation Feed', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 24),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Engine runs up to 5 attempts and automatically saves the best overall result (based on weighted severity and quality score).',
+                  style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
           
           if (state.status == GenerationStatus.idle) ...[
              Center(

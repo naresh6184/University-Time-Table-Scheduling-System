@@ -229,9 +229,28 @@ def run_scheduler(db: Session, session_id: int, population_size: int = 100, gene
             )
 
             current_best = min(final_population, key=lambda x: x.violation)
+            current_best_soft = sum(current_best.objectives) if current_best.objectives else float('inf')
             
-            if best_overall_solution is None or current_best.violation < best_overall_solution.violation:
+            if best_overall_solution is None:
                 best_overall_solution = current_best
+                logger.info(f"  Attempt {attempt} is the first valid solution.")
+            else:
+                best_overall_soft = sum(best_overall_solution.objectives) if best_overall_solution.objectives else float('inf')
+                
+                # UPDATE LOGIC:
+                # 1. If new attempt has strictly fewer hard violations (Penalty Score).
+                # 2. If violations are equal, but new attempt has a better (lower) soft score.
+                if current_best.violation < best_overall_solution.violation:
+                    logger.info(f"  Attempt {attempt} found BETTER hard violations ({current_best.violation} < {best_overall_solution.violation}). Updating best.")
+                    best_overall_solution = current_best
+                elif current_best.violation == best_overall_solution.violation:
+                    if current_best_soft < best_overall_soft:
+                        logger.info(f"  Attempt {attempt} matched hard violations ({current_best.violation}) but has BETTER soft score ({current_best_soft:.3f} < {best_overall_soft:.3f}). Updating best.")
+                        best_overall_solution = current_best
+                    else:
+                        logger.info(f"  Attempt {attempt} matched hard violations but soft score ({current_best_soft:.3f}) was not better than current best ({best_overall_soft:.3f}).")
+                else:
+                    logger.info(f"  Attempt {attempt} was worse ({current_best.violation} > {best_overall_solution.violation}). Keeping current best.")
 
             if best_overall_solution.violation == 0 or cancel_event.is_set():
                 if cancel_event.is_set():

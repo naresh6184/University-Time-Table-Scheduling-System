@@ -222,6 +222,106 @@ class UserGuideScreen extends StatelessWidget {
                       tip: 'Use Bulk Import for students to save time. Prepare an Excel file with all student data and import hundreds of students at once.',
                     ),
 
+                    const SizedBox(height: 24),
+
+                    // ── Conflict Resolution ──
+                    _GuideSectionHeader(title: 'Conflict Resolution', icon: Icons.bug_report_rounded, color: Colors.redAccent),
+                    const SizedBox(height: 12),
+
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.redAccent.withAlpha(60)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.psychology_rounded, color: Colors.redAccent, size: 22),
+                              const SizedBox(width: 10),
+                              Text('Understanding Conflict Types', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          const _ConflictItem(
+                            title: 'CAPACITY',
+                            color: Colors.orange,
+                            description: 'The room is too small for the student group.',
+                            example: '60 students are scheduled in a room with only 40 seats.',
+                          ),
+                          const _ConflictItem(
+                            title: 'TEACHER OVERLAP',
+                            color: Colors.blue,
+                            description: 'A single teacher is double-booked.',
+                            example: 'Dr. Sharma is scheduled for both OS and DBMS at Monday Period 1.',
+                          ),
+                          const _ConflictItem(
+                            title: 'ROOM OVERLAP',
+                            color: Colors.purple,
+                            description: 'Two different subjects are assigned to the same room.',
+                            example: 'Room 101 is hosting both Mathematics and Physics at the same time.',
+                          ),
+                          const _ConflictItem(
+                            title: 'GROUP DOUBLE-BOOK',
+                            color: Colors.pink,
+                            description: 'Students are expected to be in two places at once.',
+                            example: 'CSE-Batch A is scheduled for a Lab and a Lecture simultaneously.',
+                          ),
+                          const _ConflictItem(
+                            title: 'AVAILABILITY',
+                            color: Colors.teal,
+                            description: 'A teacher is scheduled during their "Busy" hours.',
+                            example: 'Prof. Verma is scheduled on Friday even though his availability is set to Monday-Thursday only.',
+                          ),
+                          const _ConflictItem(
+                            title: 'SAME-DAY DUPLICATE',
+                            color: Colors.indigo,
+                            description: 'A group has the same subject more than once in a single day.',
+                            example: 'A class has OS in Period 1 and then OS again in Period 5 on Tuesday.',
+                          ),
+                          const _ConflictItem(
+                            title: 'LUNCH BREAK',
+                            color: Colors.deepOrange,
+                            description: 'A class is scheduled during the designated break time.',
+                            example: 'A 2-hour Lab starts at Period 4 and crosses into Period 5, skipping the lunch hour.',
+                          ),
+                        ],
+                      ),
+                    ).animate().fadeIn().slideY(begin: 0.02),
+
+                    const SizedBox(height: 16),
+
+                    _GuideSection(
+                      icon: Icons.auto_awesome_rounded,
+                      color: Colors.indigoAccent,
+                      title: 'Smart Highlighting',
+                      content: 'The Timetable view has a powerful "Smart Highlighting" feature to help you visualize conflicts:\n\n'
+                          '1. Go to any Timetable (Teacher, Room, or Group view).\n'
+                          '2. Click on any cell marked with a red exclamation [!] icon.\n'
+                          '3. All "Connected" cells will automatically highlight.\n\n'
+                          '• For Capacity: All classes for that group in that room will highlight across the entire week.\n'
+                          '• For Overlaps: Only the specific classes that are double-booked at that exact time will highlight.\n\n'
+                          'This helps you quickly identify which specific entries are causing the bottleneck.',
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    _GuideSectionHeader(title: 'The Generation Engine', icon: Icons.memory_rounded, color: Colors.blueGrey),
+                    const SizedBox(height: 12),
+
+                    _GuideSection(
+                      icon: Icons.rocket_rounded,
+                      color: Colors.blueGrey,
+                      title: 'How "Best of 5" Works',
+                      content: 'To ensure the best possible quality, the engine runs up to 5 separate attempts when you click Generate.\n\n'
+                          'The engine uses a "Weighted Penalty" system. It treats "Hard Constraints" (like Lunch Breaks) as much more important than "Soft Constraints" (like teacher preferences). '
+                          'If an attempt has 10 small overlaps but 0 lunch break violations, the engine will prefer it over an attempt with only 2 lunch break violations.\n\n'
+                          'The software automatically saves the single best version it finds across all 5 attempts.',
+                    ),
+
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -230,6 +330,64 @@ class UserGuideScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ConflictItem extends StatelessWidget {
+  final String title;
+  final Color color;
+  final String description;
+  final String example;
+
+  const _ConflictItem({
+    required this.title,
+    required this.color,
+    required this.description,
+    required this.example,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withAlpha(20),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: color.withAlpha(80)),
+            ),
+            child: Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: color,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            description,
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Example: $example',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
