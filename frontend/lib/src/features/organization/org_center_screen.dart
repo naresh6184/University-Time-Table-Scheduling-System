@@ -336,7 +336,7 @@ class _HierarchicalViewState<T> extends ConsumerState<_HierarchicalView<T>> {
               // When searching, show a flat list instead of hierarchy
               if (_searchQuery.isNotEmpty) {
                 final sortedFiltered = List<T>.from(filtered)
-                  ..sort((a, b) => widget.nameExtractor(a).toLowerCase().compareTo(widget.nameExtractor(b).toLowerCase()));
+                  ..sort((a, b) => (widget.idExtractor?.call(a) ?? "").toLowerCase().compareTo((widget.idExtractor?.call(b) ?? "").toLowerCase()));
 
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -376,7 +376,7 @@ class _HierarchicalViewState<T> extends ConsumerState<_HierarchicalView<T>> {
                   final programData = programGroups[program]!;
                   
                   final batchGroups = groupBy(programData, (d) => (d['fields'] as Map<String, dynamic>)['batch'] as int);
-                  final sortedBatches = batchGroups.keys.toList()..sort((a,b) => b.compareTo(a));
+                  final sortedBatches = batchGroups.keys.toList()..sort((a,b) => a.compareTo(b));
 
                   return _HierarchySection(
                     title: program,
@@ -386,7 +386,11 @@ class _HierarchicalViewState<T> extends ConsumerState<_HierarchicalView<T>> {
                     children: sortedBatches.map((batch) {
                       final batchData = batchGroups[batch]!;
                       final branchGroups = groupBy(batchData, (d) => (d['fields'] as Map<String, dynamic>)['branchId'] as int?);
-                      final sortedBranches = branchGroups.keys.toList()..sort((a,b) => (a ?? 0).compareTo(b ?? 0));
+                      final sortedBranches = branchGroups.keys.toList()..sort((a, b) {
+                        final nameA = (branchMap[a] ?? 'General Branch').toLowerCase();
+                        final nameB = (branchMap[b] ?? 'General Branch').toLowerCase();
+                        return nameA.compareTo(nameB);
+                      });
 
                       return _HierarchySection(
                         title: batch == 0 ? "General / Unassigned" : "Batch $batch",
@@ -397,11 +401,11 @@ class _HierarchicalViewState<T> extends ConsumerState<_HierarchicalView<T>> {
                           final branchItems = branchGroups[branchId]!;
                           final branchName = branchMap[branchId] ?? 'General Branch';
 
-                          // Sort students within branch by name
+                          // Sort students within branch by Roll Number (Student ID)
                           branchItems.sort((a, b) {
-                            final nameA = widget.nameExtractor(a['item'] as T).toLowerCase();
-                            final nameB = widget.nameExtractor(b['item'] as T).toLowerCase();
-                            return nameA.compareTo(nameB);
+                            final idA = (widget.idExtractor?.call(a['item'] as T) ?? "").toLowerCase();
+                            final idB = (widget.idExtractor?.call(b['item'] as T) ?? "").toLowerCase();
+                            return idA.compareTo(idB);
                           });
 
                           return _HierarchySection(
