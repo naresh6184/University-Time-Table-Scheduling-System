@@ -9,6 +9,7 @@ import 'package:university_timetable_frontend/src/features/data_center/entity_fo
 import 'package:university_timetable_frontend/src/features/organization/org_providers.dart';
 import 'package:university_timetable_frontend/src/models/academic_entities.dart';
 import 'package:university_timetable_frontend/src/models/org_models.dart';
+import 'package:university_timetable_frontend/src/utils/string_utils.dart';
 
 class DataCenterScreen extends ConsumerStatefulWidget {
   final int initialTabIndex;
@@ -441,9 +442,12 @@ class _EntityListState<T> extends ConsumerState<_EntityList<T>> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Managing ${widget.title} List',
-                style: GoogleFonts.inter(fontSize: 18, color: theme.colorScheme.onSurfaceVariant),
+              Flexible(
+                child: Text(
+                  'Managing ${widget.title} List',
+                  style: GoogleFonts.inter(fontSize: 18, color: theme.colorScheme.onSurfaceVariant),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               ElevatedButton.icon(
                 onPressed: widget.onAdd,
@@ -484,9 +488,9 @@ class _EntityListState<T> extends ConsumerState<_EntityList<T>> {
         Expanded(
           child: state.when(
             data: (list) {
-              // Sort alphabetically by name
+              // Sort alphabetically by name, ignoring titles
               final sorted = List<T>.from(list)
-                ..sort((a, b) => widget.nameExtractor(a).toLowerCase().compareTo(widget.nameExtractor(b).toLowerCase()));
+                ..sort((a, b) => naturalCompare(getSortableName(widget.nameExtractor(a)), getSortableName(widget.nameExtractor(b))));
 
               // Filter by search query
               final filtered = _searchQuery.isEmpty

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -118,7 +119,25 @@ class _GroupDesignerScreenState extends ConsumerState<GroupDesignerScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
-        title: Text('Designing Group: ${widget.groupName}', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Designing Group: ${widget.groupName}', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            if (groupsState.value != null)
+              Builder(
+                builder: (context) {
+                  final group = groupsState.value!.firstWhereOrNull((g) => g.groupId == widget.groupId);
+                  if (group?.description != null && group!.description!.isNotEmpty) {
+                    return Text(
+                      group.description!,
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.normal, color: theme.colorScheme.onSurfaceVariant),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+          ],
+        ),
       ),
       body: Row(
         children: [
@@ -136,7 +155,10 @@ class _GroupDesignerScreenState extends ConsumerState<GroupDesignerScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Add Students', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold)),
+                      Flexible(
+                        child: Text('Add Students', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 8),
                       if (_selectedStudentIds.isNotEmpty)
                         ElevatedButton.icon(
                           onPressed: () => _addSelectedStudents(currentMembers),
@@ -171,83 +193,109 @@ class _GroupDesignerScreenState extends ConsumerState<GroupDesignerScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Filters Row 1: Program & Batch
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          decoration: const InputDecoration(labelText: 'Select Program'),
-                          initialValue: _selectedProgram,
-                          items: [
-                            const DropdownMenuItem<String>(value: null, child: Text('All Programs')),
-                            ...['B.Tech', 'M.Tech', 'MBA', 'BBA'].map((p) => DropdownMenuItem(value: p, child: Text(p))),
-                          ],
-                          onChanged: (val) => setState(() {
-                            _selectedProgram = val;
-                            _selectedStudentIds.clear();
-                          }),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(labelText: 'Select Batch'),
-                          initialValue: _selectedBatch,
-                          items: [
-                            const DropdownMenuItem<int>(value: null, child: Text('All Batches')),
-                            ...availableBatches.map((b) => DropdownMenuItem(value: b, child: Text(b.toString()))),
-                          ],
-                          onChanged: (val) => setState(() {
-                            _selectedBatch = val;
-                            _selectedStudentIds.clear();
-                          }),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  // Filters section with responsiveness
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 600;
+                      
+                      final programDropdown = DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Select Program'),
+                        initialValue: _selectedProgram,
+                        items: [
+                          const DropdownMenuItem<String>(value: null, child: Text('All Programs')),
+                          ...['B.Tech', 'M.Tech', 'MBA', 'BBA'].map((p) => DropdownMenuItem(value: p, child: Text(p, overflow: TextOverflow.ellipsis))),
+                        ],
+                        onChanged: (val) => setState(() {
+                          _selectedProgram = val;
+                          _selectedStudentIds.clear();
+                        }),
+                      );
 
-                  // Filters Row 2: Branch & Source Group
-                  Row(
-                    children: [
-                      Expanded(
-                        child: branchesState.when(
-                          data: (list) => DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(labelText: 'Select Branch'),
-                            initialValue: _selectedBranchId,
-                            items: [
-                              const DropdownMenuItem<int>(value: null, child: Text('All Branches')),
-                              ...list.map((b) => DropdownMenuItem(value: b.branchId, child: Text(b.name))),
-                            ],
-                            onChanged: (val) => setState(() {
-                              _selectedBranchId = val;
-                              _selectedStudentIds.clear();
-                            }),
-                          ),
-                          loading: () => const LinearProgressIndicator(),
-                          error: (e, s) => Text('Error: $e'),
+                      final batchDropdown = DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Select Batch'),
+                        initialValue: _selectedBatch,
+                        items: [
+                          const DropdownMenuItem<int>(value: null, child: Text('All Batches')),
+                          ...availableBatches.map((b) => DropdownMenuItem(value: b, child: Text(b.toString(), overflow: TextOverflow.ellipsis))),
+                        ],
+                        onChanged: (val) => setState(() {
+                          _selectedBatch = val;
+                          _selectedStudentIds.clear();
+                        }),
+                      );
+
+                      final branchDropdown = branchesState.when(
+                        data: (list) => DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'Select Branch'),
+                          initialValue: _selectedBranchId,
+                          items: [
+                            const DropdownMenuItem<int>(value: null, child: Text('All Branches')),
+                            ...list.map((b) => DropdownMenuItem(value: b.branchId, child: Text(b.name, overflow: TextOverflow.ellipsis))),
+                          ],
+                          onChanged: (val) => setState(() {
+                            _selectedBranchId = val;
+                            _selectedStudentIds.clear();
+                          }),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: groupsState.when(
-                          data: (list) => DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(labelText: 'From Another Group'),
-                            initialValue: _selectedSourceGroupId,
-                            items: [
-                              const DropdownMenuItem<int>(value: null, child: Text('None (See All)')),
-                              ...list.where((g) => g.groupId != widget.groupId).map((g) => DropdownMenuItem(value: g.groupId, child: Text(g.name))),
-                            ],
-                            onChanged: (val) => setState(() {
-                              _selectedSourceGroupId = val;
-                              _selectedStudentIds.clear();
-                            }),
-                          ),
-                          loading: () => const LinearProgressIndicator(),
-                          error: (e, s) => Text('Error: $e'),
+                        loading: () => const LinearProgressIndicator(),
+                        error: (e, s) => Text('Error: $e'),
+                      );
+
+                      final sourceGroupDropdown = groupsState.when(
+                        data: (list) => DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'From Another Group'),
+                          initialValue: _selectedSourceGroupId,
+                          items: [
+                            const DropdownMenuItem<int>(value: null, child: Text('None (See All)')),
+                            ...list.where((g) => g.groupId != widget.groupId).map((g) => DropdownMenuItem(value: g.groupId, child: Text(g.name, overflow: TextOverflow.ellipsis))),
+                          ],
+                          onChanged: (val) => setState(() {
+                            _selectedSourceGroupId = val;
+                            _selectedStudentIds.clear();
+                          }),
                         ),
-                      ),
-                    ],
+                        loading: () => const LinearProgressIndicator(),
+                        error: (e, s) => Text('Error: $e'),
+                      );
+
+                      if (isNarrow) {
+                        return Column(
+                          children: [
+                            programDropdown,
+                            const SizedBox(height: 12),
+                            batchDropdown,
+                            const SizedBox(height: 12),
+                            branchDropdown,
+                            const SizedBox(height: 12),
+                            sourceGroupDropdown,
+                          ],
+                        );
+                      }
+
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: programDropdown),
+                              const SizedBox(width: 16),
+                              Expanded(child: batchDropdown),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(child: branchDropdown),
+                              const SizedBox(width: 16),
+                              Expanded(child: sourceGroupDropdown),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   

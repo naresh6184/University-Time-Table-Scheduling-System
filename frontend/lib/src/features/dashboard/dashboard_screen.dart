@@ -671,7 +671,7 @@ class _StudentBranchChart extends StatelessWidget {
     }).toList();
 
     chartData.sort((a, b) => b.value.compareTo(a.value));
-    final topData = chartData.take(5).toList();
+    final topData = chartData.toList();
 
     double maxY = topData.isEmpty ? 5 : topData.map((e) => e.value.toDouble()).reduce((a, b) => a > b ? a : b);
     if (maxY < 5) maxY = 5;

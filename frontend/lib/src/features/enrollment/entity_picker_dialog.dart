@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:university_timetable_frontend/src/utils/string_utils.dart';
 
 class EntityItem<T> {
   final T data;
@@ -75,8 +76,8 @@ class _EntityPickerDialogState<T> extends State<EntityPickerDialog<T>> with Sing
     // For session tab, merge original items with newly imported ones
     final effectiveItems = isCentralTab ? items : [...items, ..._newlyImportedItems.where((n) => !items.any((i) => i.label == n.label))];
     
-    // Sort alphabetically by label
-    effectiveItems.sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
+    // Sort alphabetically by label, ignoring titles
+    effectiveItems.sort((a, b) => getSortableName(a.label).toLowerCase().compareTo(getSortableName(b.label).toLowerCase()));
 
     final filtered = _getFilteredItems(effectiveItems);
     final theme = Theme.of(context);
@@ -130,6 +131,7 @@ class _EntityPickerDialogState<T> extends State<EntityPickerDialog<T>> with Sing
     }
 
     return ListView.separated(
+      key: PageStorageKey('entity_picker_${isCentralTab ? 'central' : 'session'}_$_label'),
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
@@ -147,8 +149,7 @@ class _EntityPickerDialogState<T> extends State<EntityPickerDialog<T>> with Sing
                       visualDensity: VisualDensity.compact,
                     )
                   : FilledButton.tonal(
-                      child: const Text('Import'),
-                      onPressed: () async {
+                      onPressed: _isLoading ? null : () async {
                         final messenger = ScaffoldMessenger.of(context);
                         setState(() => _isLoading = true);
                         try {
@@ -165,6 +166,7 @@ class _EntityPickerDialogState<T> extends State<EntityPickerDialog<T>> with Sing
                           if (mounted) setState(() => _isLoading = false);
                         }
                       },
+                      child: const Text('Import'),
                     ))
               : const Icon(Icons.chevron_right),
           onTap: () {
@@ -252,15 +254,22 @@ class _EntityPickerDialogState<T> extends State<EntityPickerDialog<T>> with Sing
             ),
             // Content
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildList(widget.sessionItems, isCentralTab: false),
-                        _buildList(widget.centralItems, isCentralTab: true),
-                      ],
+              child: Stack(
+                children: [
+                  TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildList(widget.sessionItems, isCentralTab: false),
+                      _buildList(widget.centralItems, isCentralTab: true),
+                    ],
+                  ),
+                  if (_isLoading)
+                    Container(
+                      color: Colors.black.withAlpha(20),
+                      child: const Center(child: CircularProgressIndicator()),
                     ),
+                ],
+              ),
             ),
           ],
         ),

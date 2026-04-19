@@ -9,6 +9,7 @@ import 'package:university_timetable_frontend/src/features/organization/org_form
 import 'package:university_timetable_frontend/src/features/organization/org_providers.dart';
 import 'package:university_timetable_frontend/src/features/organization/bulk_import_dialog.dart';
 import 'package:university_timetable_frontend/src/models/org_models.dart';
+import 'package:university_timetable_frontend/src/utils/string_utils.dart';
 import 'package:university_timetable_frontend/src/features/organization/widgets/student_list_view.dart';
 
 class OrgCenterScreen extends ConsumerStatefulWidget {
@@ -57,7 +58,7 @@ class _OrgCenterScreenState extends ConsumerState<OrgCenterScreen> with SingleTi
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(screenTitle, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold)),
+                    Flexible(child: Text(screenTitle, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
                     if (_tabController.index == 2)
                       SegmentedButton<bool>(
                         segments: const [
@@ -339,6 +340,7 @@ class _HierarchicalViewState<T> extends ConsumerState<_HierarchicalView<T>> {
                   ..sort((a, b) => (widget.idExtractor?.call(a) ?? "").toLowerCase().compareTo((widget.idExtractor?.call(b) ?? "").toLowerCase()));
 
                 return ListView.separated(
+                  key: const PageStorageKey('org_center_search_results'),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: sortedFiltered.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -369,6 +371,7 @@ class _HierarchicalViewState<T> extends ConsumerState<_HierarchicalView<T>> {
               final sortedPrograms = programGroups.keys.toList()..sort();
 
               return ListView.builder(
+                key: const PageStorageKey('org_center_hierarchy_view'),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: sortedPrograms.length,
                 itemBuilder: (context, pIndex) {
@@ -565,8 +568,9 @@ class _OrgListState<T> extends ConsumerState<_OrgList<T>> {
           child: state.when(
             data: (list) {
               // Sort alphabetically by name
+              // Sort by name using natural comparison for groups
               final sorted = List<T>.from(list)
-                ..sort((a, b) => widget.nameField(a).toLowerCase().compareTo(widget.nameField(b).toLowerCase()));
+                ..sort((a, b) => naturalCompare(widget.nameField(a), widget.nameField(b)));
 
               // Filter by search query
               final filtered = _searchQuery.isEmpty
@@ -592,6 +596,7 @@ class _OrgListState<T> extends ConsumerState<_OrgList<T>> {
               }
 
               return ListView.separated(
+                key: PageStorageKey('org_center_list_$entityLabel'),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: filtered.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),

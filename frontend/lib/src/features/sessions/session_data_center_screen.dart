@@ -9,6 +9,7 @@ import 'package:university_timetable_frontend/src/features/enrollment/entity_pic
 import 'package:university_timetable_frontend/src/features/sessions/session_entities_provider.dart';
 import 'package:university_timetable_frontend/src/models/academic_entities.dart';
 import 'package:university_timetable_frontend/src/models/org_models.dart';
+import 'package:university_timetable_frontend/src/utils/string_utils.dart';
 
 class SessionDataCenterScreen extends ConsumerStatefulWidget {
   final int initialTabIndex;
@@ -435,9 +436,9 @@ class _EntityListState<T> extends ConsumerState<_EntityList<T>> {
         Expanded(
           child: state.when(
             data: (list) {
-              // 1. Sort alphabetically by name
+              // Sort alphabetically by name, ignoring titles
               final sorted = List<T>.from(list)
-                ..sort((a, b) => widget.nameExtractor(a).toLowerCase().compareTo(widget.nameExtractor(b).toLowerCase()));
+                ..sort((a, b) => naturalCompare(getSortableName(widget.nameExtractor(a)), getSortableName(widget.nameExtractor(b))));
 
               // 2. Filter by search query
               final filtered = _searchQuery.isEmpty
@@ -474,6 +475,7 @@ class _EntityListState<T> extends ConsumerState<_EntityList<T>> {
               }
 
               return ListView.separated(
+                key: PageStorageKey('session_data_list_${widget.title}'),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: filtered.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
