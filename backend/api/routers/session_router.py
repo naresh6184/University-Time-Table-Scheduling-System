@@ -122,7 +122,14 @@ def delete_session(session_id: int, db: Session = Depends(get_db)):
     
     # 5. Wipe the Session itself
     db.query(SessionModel).filter(SessionModel.session_id == session_id).delete(synchronize_session=False)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete this session because some data still references it. Please try resetting the session first."
+        )
     return {"message": "Session cleanly deleted"}
 from backend.api.services.session_copy_service import (
     copy_session_configuration,

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -8,6 +9,7 @@ import 'package:university_timetable_frontend/src/features/organization/org_form
 import 'package:university_timetable_frontend/src/features/organization/org_providers.dart';
 import 'package:university_timetable_frontend/src/features/organization/bulk_import_dialog.dart';
 import 'package:university_timetable_frontend/src/models/org_models.dart';
+import 'package:university_timetable_frontend/src/features/organization/widgets/student_list_view.dart';
 
 class OrgCenterScreen extends ConsumerStatefulWidget {
   final int initialTabIndex;
@@ -20,11 +22,13 @@ class OrgCenterScreen extends ConsumerStatefulWidget {
 
 class _OrgCenterScreenState extends ConsumerState<OrgCenterScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _isTreeView = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialTabIndex);
+    _tabController.addListener(() => setState(() {}));
   }
 
   @override
@@ -38,7 +42,7 @@ class _OrgCenterScreenState extends ConsumerState<OrgCenterScreen> with SingleTi
   @override
   Widget build(BuildContext context) {
     final screenTitle = widget.isFocused 
-        ? ['Branch List', 'Group Hierarchical List', 'Student Hierarchical List'][widget.initialTabIndex]
+        ? ['Branch List', 'Group List', 'Student List'][widget.initialTabIndex]
         : 'Organization Hub';
 
     return Column(
@@ -50,7 +54,21 @@ class _OrgCenterScreenState extends ConsumerState<OrgCenterScreen> with SingleTi
             children: [
               Padding(
                 padding: EdgeInsets.fromLTRB(24, 24, 24, widget.isFocused ? 20 : 0),
-                child: Text(screenTitle, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(screenTitle, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold)),
+                    if (_tabController.index == 2)
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment(value: true, label: Text('Hierarchy'), icon: Icon(Icons.account_tree_outlined)),
+                          ButtonSegment(value: false, label: Text('List View'), icon: Icon(Icons.list_alt_rounded)),
+                        ],
+                        selected: {_isTreeView},
+                        onSelectionChanged: (val) => setState(() => _isTreeView = val.first),
+                      ),
+                  ],
+                ),
               ),
               if (!widget.isFocused)
                 TabBar(
@@ -75,7 +93,16 @@ class _OrgCenterScreenState extends ConsumerState<OrgCenterScreen> with SingleTi
                 idField: (b) => b.branchId.toString(),
                 nameField: (b) => b.abbreviation != null ? '${b.name} (${b.abbreviation})' : b.name,
                 subtitleField: (b) => 'Academic Branch',
-                onDelete: (id) => ProviderScope.containerOf(context).read(branchesProvider.notifier).deleteBranch(int.parse(id)),
+                onDelete: (id) async {
+                  try {
+                    await ProviderScope.containerOf(context).read(branchesProvider.notifier).deleteBranch(int.parse(id));
+                  } catch (e) {
+                    if (context.mounted) {
+                      final message = e is DioException ? (e.message ?? e.toString()) : e.toString();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red.shade700, behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)));
+                    }
+                  }
+                },
                 onAdd: () => _showAddDialog(context, OrgType.branch),
                 onEdit: (b) => _showAddDialog(context, OrgType.branch, initialData: b),
                 icon: Icons.account_tree_rounded,
@@ -86,7 +113,16 @@ class _OrgCenterScreenState extends ConsumerState<OrgCenterScreen> with SingleTi
                 idField: (g) => g.groupId.toString(),
                 nameField: (g) => g.name,
                 subtitleField: (g) => '${g.studentCount} Students${g.description != null ? ' • ${g.description}' : ''}',
-                onDelete: (id) => ref.read(groupsProvider.notifier).deleteGroup(int.parse(id)),
+                onDelete: (id) async {
+                  try {
+                    await ref.read(groupsProvider.notifier).deleteGroup(int.parse(id));
+                  } catch (e) {
+                    if (context.mounted) {
+                      final message = e is DioException ? (e.message ?? e.toString()) : e.toString();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red.shade700, behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)));
+                    }
+                  }
+                },
                 onAdd: () => _showAddDialog(context, OrgType.group),
                 onEdit: (g) => _showAddDialog(context, OrgType.group, initialData: g),
                 onManage: (g) async {
@@ -96,30 +132,32 @@ class _OrgCenterScreenState extends ConsumerState<OrgCenterScreen> with SingleTi
                 icon: Icons.groups_rounded,
               ),
 
-              // Students (Hierarchical)
-              _HierarchicalView<StudentModel>(
-                provider: studentsProvider,
-                title: 'Student',
-                nameExtractor: (s) => s.name,
-                idExtractor: (s) => s.studentId,
-                onAdd: () => _showAddDialog(context, OrgType.student),
-                onBulkImport: () => _showBulkImportDialog(context),
-                onEdit: (s) => _showAddDialog(context, OrgType.student, initialData: s),
-                onDelete: (s) => ref.read(studentsProvider.notifier).deleteStudent(s.studentId),
-                groupByFields: (s) => {'program': s.program, 'batch': s.batch ?? 0, 'branchId': s.branchId},
-                itemBuilder: (s, index, colorScheme) => ListTile(
-                  leading: Text('${index + 1}.', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurfaceVariant)),
-                  title: Text(s.name, style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
-                  subtitle: Text('ID: ${s.studentId}${s.email != null ? ' • ${s.email}' : ''}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.blue), onPressed: () => _showAddDialog(context, OrgType.student, initialData: s)),
-                      IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _confirmDelete(context, 'Student', s.name, () => ref.read(studentsProvider.notifier).deleteStudent(s.studentId))),
-                    ],
-                  ),
-                ),
-              ),
+              // Students
+              _isTreeView 
+                ? _HierarchicalView<StudentModel>(
+                    provider: studentsProvider,
+                    title: 'Student',
+                    nameExtractor: (s) => s.name,
+                    idExtractor: (s) => s.studentId,
+                    onAdd: () => _showAddDialog(context, OrgType.student),
+                    onBulkImport: () => _showBulkImportDialog(context),
+                    onEdit: (s) => _showAddDialog(context, OrgType.student, initialData: s),
+                    onDelete: (s) => ref.read(studentsProvider.notifier).deleteStudent(s.studentId),
+                    groupByFields: (s) => {'program': s.program, 'batch': s.batch ?? 0, 'branchId': s.branchId},
+                    itemBuilder: (s, index, colorScheme) => ListTile(
+                      leading: Text('${index + 1}.', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: colorScheme.onSurfaceVariant)),
+                      title: Text(s.name, style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+                      subtitle: Text('ID: ${s.studentId}${s.email != null ? ' • ${s.email}' : ''}'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.blue), onPressed: () => _showAddDialog(context, OrgType.student, initialData: s)),
+                          IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => _confirmDelete(context, 'Student', s.name, () async => ref.read(studentsProvider.notifier).deleteStudent(s.studentId))),
+                        ],
+                      ),
+                    ),
+                  )
+                : const StudentListView(),
             ],
           ),
         ),
@@ -135,7 +173,7 @@ class _OrgCenterScreenState extends ConsumerState<OrgCenterScreen> with SingleTi
     showDialog(context: context, builder: (context) => const BulkStudentImportDialog());
   }
 
-  Future<void> _confirmDelete(BuildContext context, String type, String name, VoidCallback onConfirm) async {
+  Future<void> _confirmDelete(BuildContext context, String type, String name, Future<void> Function() onConfirm) async {
     final ok = await showDialog<bool>(
       context: context, 
       builder: (c) => AlertDialog(
@@ -147,7 +185,23 @@ class _OrgCenterScreenState extends ConsumerState<OrgCenterScreen> with SingleTi
         ],
       )
     );
-    if (ok == true) onConfirm();
+    if (ok == true) {
+      try {
+        await onConfirm();
+      } catch (e) {
+        if (context.mounted) {
+          final message = e is DioException ? (e.message ?? e.toString()) : e.toString();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    }
   }
 }
 

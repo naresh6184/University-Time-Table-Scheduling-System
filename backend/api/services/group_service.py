@@ -71,4 +71,4 @@ def delete_group(db: Session, group_id: int):
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Cannot delete group due to existing constraints.")
+        raise HTTPException(status_code=409, detail="Cannot delete this group because it is still referenced by other data. Please check enrollments and timetable entries.")

@@ -47,7 +47,22 @@ def get_all_enrollments(db: Session, session_id: int):
 
 
 def delete_enrollment(db: Session, enrollment_id: int):
+    from sqlalchemy.exc import IntegrityError
+    from backend.database.models.timetable_entry import TimetableEntryModel
+
     entry = db.query(EnrollmentModel).filter(EnrollmentModel.enrollment_id == enrollment_id).first()
-    if entry:
+    if not entry:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+
+    # Clean up any timetable entries referencing this enrollment
+    db.query(TimetableEntryModel).filter(TimetableEntryModel.enrollment_id == enrollment_id).delete(synchronize_session=False)
+
+    try:
         db.delete(entry)
         db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete this enrollment because it is still referenced by timetable data. Try resetting the timetable first."
+        )

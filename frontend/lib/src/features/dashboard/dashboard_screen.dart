@@ -23,14 +23,9 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  bool _showSplash = true;
-
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) setState(() => _showSplash = false);
-    });
   }
 
   @override
@@ -107,7 +102,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
         ),
-        if (_showSplash) const _DashboardSplashScreen(),
       ],
     );
   }
@@ -188,10 +182,10 @@ class _SetupProgress extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           _StatusLine(label: 'Review Timetable Slots (Default Applied)', isDone: hasSlots, onTap: () => context.go('/slot-config')),
-          _StatusLine(label: 'Import Session Teachers', isDone: hasTeachers, onTap: () => context.go('/session-data?tab=0')),
-          _StatusLine(label: 'Import Session Classrooms', isDone: hasRooms, onTap: () => context.go('/session-data?tab=1')),
-          _StatusLine(label: 'Import Session Subjects', isDone: hasSubjects, onTap: () => context.go('/session-data?tab=2')),
-          _StatusLine(label: 'Configure Session Groups', isDone: hasGroups, onTap: () => context.go('/session-data?tab=3')),
+          _StatusLine(label: 'Import Session Teachers', isDone: hasTeachers, onTap: () => context.go('/session-data?tab=0&focused=true')),
+          _StatusLine(label: 'Import Session Classrooms', isDone: hasRooms, onTap: () => context.go('/session-data?tab=1&focused=true')),
+          _StatusLine(label: 'Import Session Subjects', isDone: hasSubjects, onTap: () => context.go('/session-data?tab=2&focused=true')),
+          _StatusLine(label: 'Configure Session Groups', isDone: hasGroups, onTap: () => context.go('/session-data?tab=3&focused=true')),
           _StatusLine(label: 'Create Enrollment Assignments', isDone: hasEnrollments, onTap: () => context.go('/enrollment')),
           const Divider(height: 32),
           Text(
@@ -451,10 +445,12 @@ class _CentralDatabaseDashboard extends ConsumerWidget {
           spacing: 12,
           runSpacing: 12,
           children: [
-            _ActionButton(label: 'Add Teacher', icon: Icons.person_add_rounded, onPressed: () => context.go('/data-center?tab=0')),
-            _ActionButton(label: 'Add Student', icon: Icons.school_rounded, onPressed: () => context.go('/org-center?tab=2')),
-            _ActionButton(label: 'Add Subject', icon: Icons.my_library_books_rounded, onPressed: () => context.go('/data-center?tab=2')),
-            _ActionButton(label: 'Add Classroom', icon: Icons.domain_add_rounded, onPressed: () => context.go('/data-center?tab=1')),
+            _ActionButton(label: 'Add Teacher', icon: Icons.person_add_rounded, onPressed: () => context.go('/data-center?tab=0&focused=true')),
+            _ActionButton(label: 'Add Student', icon: Icons.school_rounded, onPressed: () => context.go('/org-center?tab=2&focused=true')),
+            _ActionButton(label: 'Add Subject', icon: Icons.my_library_books_rounded, onPressed: () => context.go('/data-center?tab=2&focused=true')),
+            _ActionButton(label: 'Add Classroom', icon: Icons.domain_add_rounded, onPressed: () => context.go('/data-center?tab=1&focused=true')),
+            _ActionButton(label: 'Add Branch', icon: Icons.account_tree_rounded, onPressed: () => context.go('/org-center?tab=0&focused=true')),
+            _ActionButton(label: 'Add Group', icon: Icons.groups_rounded, onPressed: () => context.go('/org-center?tab=1&focused=true')),
             _ActionButton(label: 'New Session', icon: Icons.add_circle_outline_rounded, onPressed: () => showDialog(context: context, builder: (context) => const SessionDialog())),
           ],
         ).animate().fadeIn(delay: 400.ms),

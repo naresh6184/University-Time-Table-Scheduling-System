@@ -30,13 +30,20 @@ def delete_classroom(db: Session, room_id: int):
     # 1. Delete session_classroom junction entries
     db.query(SessionClassroomModel).filter(SessionClassroomModel.room_id == room_id).delete(synchronize_session=False)
 
-    # 2. Delete the classroom itself
+    # 2. Delete timetable entries referencing this room
+    from backend.database.models.timetable_entry import TimetableEntryModel
+    db.query(TimetableEntryModel).filter(TimetableEntryModel.room_id == room_id).delete(synchronize_session=False)
+
+    # 3. Delete the classroom itself
     try:
         db.delete(room)
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Cannot delete classroom due to existing constraints.")
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete this classroom because it is still referenced by other data. Please remove related enrollments or timetable data first."
+        )
 
 def update_classroom(db: Session, room_id: int, classroom_data):
     if hasattr(classroom_data, 'name') and classroom_data.name:

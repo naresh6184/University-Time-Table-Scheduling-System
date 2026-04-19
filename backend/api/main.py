@@ -18,7 +18,8 @@ from backend.api.routers.admin import (
     group_student_router,
     enrollment_router,
     teacher_availability_router,
-    slot_router
+    slot_router,
+    sql_router
 )
 from sqladmin import Admin
 from backend.admin import (
@@ -115,6 +116,7 @@ app.include_router(group_student_router.router)
 app.include_router(enrollment_router.router)
 app.include_router(teacher_availability_router.router)
 app.include_router(slot_router.router)
+app.include_router(sql_router.router)
 
 
 app.include_router(timetable_view.router, prefix="/timetable")

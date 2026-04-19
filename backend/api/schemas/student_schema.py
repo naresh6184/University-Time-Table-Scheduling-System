@@ -28,3 +28,12 @@ class StudentResponse(BaseModel):
     program: str
 
     model_config = {"from_attributes": True}
+
+class StudentBulkDelete(BaseModel):
+    student_ids: list[str]
+
+class StudentBulkUpdate(BaseModel):
+    student_ids: list[str]
+    branch_id: int | None = None
+    batch: int | None = None
+    program: str | None = None

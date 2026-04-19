@@ -29,7 +29,7 @@ env.bak/
 venv.bak/
 rootenv/
 backend/.env
-
+.env
 
 # === Logs ===
 *.log

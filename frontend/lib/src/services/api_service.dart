@@ -31,6 +31,25 @@ final dioProvider = Provider<Dio>((ref) {
 
   dio.interceptors.add(LogInterceptor(responseBody: false, requestBody: false));
 
+  // Extract human-readable error messages from FastAPI responses
+  dio.interceptors.add(InterceptorsWrapper(
+    onError: (DioException error, handler) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic> && data.containsKey('detail')) {
+        final detail = data['detail'];
+        final message = detail is String ? detail : detail.toString();
+        return handler.reject(DioException(
+          requestOptions: error.requestOptions,
+          response: error.response,
+          type: error.type,
+          error: message,
+          message: message,
+        ));
+      }
+      return handler.next(error);
+    },
+  ));
+
   return dio;
 });
 

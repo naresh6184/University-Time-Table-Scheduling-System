@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from backend.database.models.timetable_version import TimetableVersionModel
 from backend.database.models.timetable_entry import TimetableEntryModel
@@ -402,13 +403,25 @@ def activate_timetable_version(db: Session, version_id: int):
 # Delete a timetable version
 # ------------------------------------------------
 def delete_timetable_version(db: Session, version_id: int):
+    from backend.database.models.timetable_conflict import TimetableConflictModel
+
     version = db.query(TimetableVersionModel).filter(TimetableVersionModel.version_id == version_id).first()
     if not version:
         return False
-        
+
+    # Also delete any duplicate versions pointing to this one
+    db.query(TimetableVersionModel).filter(TimetableVersionModel.is_duplicate_of == version_id).delete(synchronize_session=False)
+
+    # Clean up conflicts and entries
+    db.query(TimetableConflictModel).filter(TimetableConflictModel.version_id == version_id).delete(synchronize_session=False)
     db.query(TimetableEntryModel).filter(TimetableEntryModel.version_id == version_id).delete(synchronize_session=False)
-    db.delete(version)
-    db.commit()
+
+    try:
+        db.delete(version)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return False
     return True
 
 # ------------------------------------------------

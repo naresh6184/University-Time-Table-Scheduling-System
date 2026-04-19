@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from backend.database.models.branch import BranchModel
 
@@ -26,8 +28,15 @@ def delete_branch(db: Session, branch_id: int):
     branch = get_branch(db, branch_id)
 
     if branch:
-        db.delete(branch)
-        db.commit()
+        try:
+            db.delete(branch)
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot delete this branch because it still has students or groups assigned to it. Please remove or reassign them first."
+            )
 
 def update_branch(db: Session, branch_id: int, branch_data):
     branch = get_branch(db, branch_id)

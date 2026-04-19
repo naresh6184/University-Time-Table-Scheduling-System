@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -363,7 +364,7 @@ class _DataCenterScreenState extends ConsumerState<DataCenterScreen> with Single
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, String entityType, String itemName, VoidCallback onConfirm) async {
+  Future<void> _confirmDelete(BuildContext context, String entityType, String itemName, Future<void> Function() onConfirm) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
@@ -380,7 +381,21 @@ class _DataCenterScreenState extends ConsumerState<DataCenterScreen> with Single
       ),
     );
     if (confirm == true) {
-      onConfirm();
+      try {
+        await onConfirm();
+      } catch (e) {
+        if (context.mounted) {
+          final message = e is DioException ? (e.message ?? e.toString()) : e.toString();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
     }
   }
 }

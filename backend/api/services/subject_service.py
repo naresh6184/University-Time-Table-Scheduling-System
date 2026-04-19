@@ -52,7 +52,7 @@ def delete_subject(db: Session, subject_id: int):
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Cannot delete subject due to existing constraints.")
+        raise HTTPException(status_code=409, detail="Cannot delete this subject because it is still referenced by other data. Please check enrollments and timetable entries.")
 
 def update_subject(db: Session, subject_id: int, subject_data):
     if hasattr(subject_data, 'name') and subject_data.name:

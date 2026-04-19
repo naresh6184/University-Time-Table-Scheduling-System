@@ -363,6 +363,7 @@ class _AppSidebarState extends ConsumerState<_AppSidebar> {
                     _ShellNavItem(icon: Icons.groups_rounded, label: 'Groups', path: '/org-center', query: 'tab=1&focused=true', isCollapsed: widget.isCollapsed, count: groupCount),
                     const Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Divider(height: 1)),
                     _ShellNavItem(icon: Icons.access_time_filled_rounded, label: 'Slot Config', path: '/slot-config', isCollapsed: widget.isCollapsed),
+                    _ShellNavItem(icon: Icons.terminal_rounded, label: 'Developer Tools', path: '/sql-console', isCollapsed: widget.isCollapsed),
                   ],
 
                   // ── Session nav items ──

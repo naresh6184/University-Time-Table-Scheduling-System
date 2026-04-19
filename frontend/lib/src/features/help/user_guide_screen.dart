@@ -322,6 +322,22 @@ class UserGuideScreen extends StatelessWidget {
                           'The software automatically saves the single best version it finds across all 5 attempts.',
                     ),
 
+                    const SizedBox(height: 24),
+
+                    _GuideSectionHeader(title: 'Advanced: Developer Tools', icon: Icons.terminal_rounded, color: Colors.cyan),
+                    const SizedBox(height: 12),
+
+                    _GuideSection(
+                      icon: Icons.code_rounded,
+                      color: Colors.cyan,
+                      title: 'Direct Database Access',
+                      content: 'UniScheduler includes a built-in SQLite Console for advanced users to run raw queries directly against the central database. '
+                          'It fully supports standard SQL commands, SQLite-specific pragmas, and even common MySQL aliases like SHOW TABLES and DESCRIBE.\n\n'
+                          'This is useful for bulk updates or custom data extractions that the UI does not support natively.\n\n'
+                          'To access it, navigate to Developer Tools in the sidebar. You will be prompted to agree to the risks and enter the developer password.\n\n'
+                          'The password is: superadmin123',
+                    ),
+
                     const SizedBox(height: 40),
                   ],
                 ),

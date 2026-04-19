@@ -90,7 +90,7 @@ def delete_teacher(db: Session, teacher_id: int):
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Cannot delete teacher due to existing constraints.")
+        raise HTTPException(status_code=409, detail="Cannot delete this teacher because they are still referenced by other data. Please check enrollments and timetable entries.")
 
 def update_teacher(db: Session, teacher_id: int, teacher_data):
     if hasattr(teacher_data, 'name') and teacher_data.name:

@@ -1,4 +1,5 @@
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from backend.database.models.teacher import TeacherModel
@@ -55,7 +56,14 @@ def remove_teacher_from_session(db: Session, session_id: int, teacher_id: int):
         )
     ).delete(synchronize_session=False)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot remove this teacher from the session because they have enrollments assigned. Please delete their enrollments first."
+        )
     return {"message": "Success"}
 
 # --- Subjects ---
@@ -71,7 +79,14 @@ def add_subject_to_session(db: Session, session_id: int, subject_id: int):
 
 def remove_subject_from_session(db: Session, session_id: int, subject_id: int):
     db.query(SessionSubjectModel).filter_by(session_id=session_id, subject_id=subject_id).delete()
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot remove this subject from the session because it has enrollments assigned. Please delete those enrollments first."
+        )
     return {"message": "Success"}
 
 
@@ -105,7 +120,14 @@ def add_group_to_session(db: Session, session_id: int, group_id: int):
 
 def remove_group_from_session(db: Session, session_id: int, group_id: int):
     db.query(SessionGroupModel).filter_by(session_id=session_id, group_id=group_id).delete()
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot remove this group from the session because it has enrollments assigned. Please delete those enrollments first."
+        )
     return {"message": "Success"}
 
 
@@ -122,5 +144,12 @@ def add_room_to_session(db: Session, session_id: int, room_id: int):
 
 def remove_room_from_session(db: Session, session_id: int, room_id: int):
     db.query(SessionClassroomModel).filter_by(session_id=session_id, room_id=room_id).delete()
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot remove this classroom from the session because it is used in generated timetables. Please reset the timetable first."
+        )
     return {"message": "Success"}

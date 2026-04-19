@@ -11,6 +11,7 @@ import 'package:university_timetable_frontend/src/features/slot_config/slot_conf
 import 'package:university_timetable_frontend/src/features/data_center/teacher_availability_screen.dart';
 import 'package:university_timetable_frontend/src/features/sessions/session_data_center_screen.dart';
 import 'package:university_timetable_frontend/src/features/settings/settings_screen.dart';
+import 'package:university_timetable_frontend/src/features/developer_tools/sql_console_screen.dart';
 import 'package:university_timetable_frontend/src/features/help/user_guide_screen.dart';
 import 'package:university_timetable_frontend/src/routing/app_shell.dart';
 
@@ -81,6 +82,10 @@ final router = GoRouter(
         GoRoute(
           path: '/user-guide',
           pageBuilder: (context, state) => const NoTransitionPage(child: UserGuideScreen()),
+        ),
+        GoRoute(
+          path: '/sql-console',
+          pageBuilder: (context, state) => const NoTransitionPage(child: SqlConsoleScreen()),
         ),
       ],
     ),

@@ -43,12 +43,9 @@ class BranchesNotifier extends AsyncNotifier<List<BranchModel>> {
 
 
   Future<void> deleteBranch(int id) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final api = ref.read(apiServiceProvider);
-      await api.delete('/admin/branches/$id');
-      return build();
-    });
+    final api = ref.read(apiServiceProvider);
+    await api.delete('/admin/branches/$id');
+    ref.invalidateSelf();
   }
 }
 
@@ -105,12 +102,9 @@ class GroupsNotifier extends AsyncNotifier<List<GroupModel>> {
   }
 
   Future<void> deleteGroup(int id) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final api = ref.read(apiServiceProvider);
-      await api.delete('/admin/groups/$id');
-      return build();
-    });
+    final api = ref.read(apiServiceProvider);
+    await api.delete('/admin/groups/$id');
+    ref.invalidateSelf();
   }
 }
 
@@ -174,12 +168,9 @@ class StudentsNotifier extends AsyncNotifier<List<StudentModel>> {
   }
 
   Future<void> deleteStudent(String rollNumber) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final api = ref.read(apiServiceProvider);
-      await api.delete('/admin/students/$rollNumber');
-      return build();
-    });
+    final api = ref.read(apiServiceProvider);
+    await api.delete('/admin/students/$rollNumber');
+    ref.invalidateSelf();
   }
 
   Future<Map<String, dynamic>> previewImport(List<int> bytes, String fileName) async {
@@ -198,6 +189,34 @@ class StudentsNotifier extends AsyncNotifier<List<StudentModel>> {
     final response = await api.post('/admin/students/bulk-upload/confirm', data: students);
     ref.invalidateSelf();
     return response.data['message'];
+  }
+
+  Future<void> bulkDeleteStudents(List<String> rollNumbers) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final api = ref.read(apiServiceProvider);
+      await api.post('/admin/students/bulk-delete', data: {'student_ids': rollNumbers});
+      return build();
+    });
+  }
+
+  Future<void> bulkUpdateStudents({
+    required List<String> rollNumbers,
+    int? branchId,
+    int? batch,
+    String? program,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final api = ref.read(apiServiceProvider);
+      await api.post('/admin/students/bulk-update', data: {
+        'student_ids': rollNumbers,
+        if (branchId != null) 'branch_id': branchId,
+        if (batch != null) 'batch': batch,
+        if (program != null) 'program': program,
+      });
+      return build();
+    });
   }
 }
 
