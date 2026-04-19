@@ -2,14 +2,14 @@
 
 [Setup]
 AppName=UniScheduler
-AppVersion=1.0
+AppVersion=1.2.0
 DefaultDirName=C:\UniScheduler
 DefaultGroupName=UniScheduler
 ; FIX 6: Replaced hardcoded "C:\Users\Nares\Desktop" with a portable relative path.
-; The installer .exe will now be placed in an "installer_output" folder next to this script,
+; The installer .exe will now be placed in an "dist_v120" folder next to this script,
 ; which works on any machine without modification.
-OutputDir=installer_output
-OutputBaseFilename=UniScheduler_Setup_v1_release
+OutputDir=dist_v120
+OutputBaseFilename=UniScheduler_Setup_v1_2_0
 Compression=lzma2
 SolidCompression=yes
 DisableProgramGroupPage=yes
